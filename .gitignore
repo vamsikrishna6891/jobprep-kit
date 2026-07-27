@@ -1,0 +1,11 @@
+# personal context never leaves the machine
+profile/*
+!profile/profile.example.md
+applications/
+
+# live data
+funnel/funnel.sqlite
+funnel/seed.json
+
+__pycache__/
+.DS_Store
