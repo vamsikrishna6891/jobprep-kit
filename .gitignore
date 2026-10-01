@@ -1,9 +1,11 @@
 # personal context never leaves the machine
 profile/*
 !profile/profile.example.md
+!profile/search.example.json
 applications/
 
 # live data
+sourcing/
 funnel/funnel.sqlite
 funnel/seed.json
 

@@ -1,0 +1,34 @@
+{
+ "_doc": "EXAMPLE. /jobprep-setup writes yours to profile/search.json (gitignored). Keys starting with _ are ignored.",
+
+ "_archetypes": "Title phrases per archetype, matched as whole words, any case. End a phrase with * to match a prefix.",
+ "archetypes": {
+  "DS": ["data scientist", "decision scientist", "applied scientist"],
+  "Analytics": ["product analy*", "analytics manager", "analytics lead"]
+ },
+
+ "_exclude_titles": "A title containing any of these is dropped, even when it matches an archetype.",
+ "exclude_titles": ["intern", "internship", "new grad", "junior", "director", "vp", "contract"],
+
+ "_locations": "Places you would work from. Leave empty with remote false to search everywhere.",
+ "locations": ["austin", "texas", "tx"],
+
+ "_remote": "true keeps remote roles. false means being remote is not enough, the posting must still name one of your locations. remote_regions limits remote roles to regions you can work in. Empty means any remote role.",
+ "remote": true,
+ "remote_regions": ["us", "usa", "u.s.", "united states", "north america"],
+
+ "_pay": "Top of the posted base range must reach base_pay_floor (USD, 0 turns the check off). unknown_pay is keep or drop for roles that post no base range.",
+ "base_pay_floor": 150000,
+ "unknown_pay": "keep",
+
+ "_needs_sponsorship": "true drops postings that say they will not sponsor a visa or that require citizenship or clearance.",
+ "needs_sponsorship": false,
+
+ "max_age_days": 30,
+ "reapply_days": 90,
+
+ "_yc_roles": "Optional. YC startup jobs by role family: software-engineer, designer, product-manager, recruiting-hr, sales-manager, marketing, support, operations, science.",
+ "yc_roles": ["science"],
+
+ "limit": 150
+}
