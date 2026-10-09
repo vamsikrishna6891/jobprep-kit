@@ -104,8 +104,30 @@ h1{font-size:21px;margin:0;font-weight:650}
 .distrow .dc{width:30px;flex:none;text-align:right;font-variant-numeric:tabular-nums}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 input[type=text]{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;min-width:200px}
-.chip{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer;text-transform:capitalize}
-.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.filterbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.filterbar input[type=text]{flex:1;min-width:180px;max-width:320px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;padding:6px 11px;font-size:12.5px;color:#374151;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button .n{color:var(--muted);font-size:11px;margin-left:4px;font-variant-numeric:tabular-nums}
+.seg button.on{background:var(--ink);color:#fff}.seg button.on .n{color:#cbd5e1}
+.fbtn{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 12px;font-size:12.5px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.fbtn.open,.fbtn.has{border-color:var(--ink)}
+.fbtn .badge{background:var(--ink);color:#fff;border-radius:10px;font-size:10.5px;padding:1px 6px}
+.fpanel{border:1px solid var(--line);border-radius:10px;background:#fbfbfc;padding:14px 16px;margin-bottom:10px;
+ display:flex;flex-wrap:wrap;gap:14px 20px}
+.fgroup{flex:1 1 140px;max-width:220px}.fgroup.st{max-width:none}.fgroup.st{flex:2 1 300px}
+.fpanel[hidden]{display:none}
+.fgroup .fl{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;margin-bottom:6px}
+.fgroup select{width:100%;border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12.5px;background:var(--card)}
+.fchecks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 12px}
+.fcheck{display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;text-transform:capitalize}
+.fcheck .sw{width:8px;height:8px;border-radius:50%;flex:none}
+.fcheck .n{margin-left:auto;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 10px}
+.pill{background:#eef0f3;border-radius:14px;padding:3px 6px 3px 10px;font-size:11.5px;display:inline-flex;align-items:center;gap:4px}
+.pill b{font-weight:600}.pill .x{cursor:pointer;color:var(--muted);padding:0 4px;font-size:13px}.pill .x:hover{color:var(--ink)}
+.clear{font-size:11.5px;color:var(--muted);cursor:pointer;text-decoration:underline;align-self:center}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line);font-size:12.7px;vertical-align:middle}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);cursor:pointer;user-select:none;background:#fbfbfc}
@@ -143,10 +165,20 @@ td .noteinput:focus{border-color:var(--applied);outline:none;color:var(--ink)}
  </div>
  <div class="panel">
   <h2>Applications</h2>
-  <div class="toolbar">
+  <div class="filterbar">
    <input type="text" id="search" placeholder="Search company or role..."/>
-   <span id="chips"></span>
+   <div class="seg" id="views"></div>
+   <button class="fbtn" id="fbtn">Filters <span class="badge" id="fcount" hidden></span></button>
   </div>
+  <div class="fpanel" id="fpanel" hidden>
+   <div class="fgroup st"><div class="fl">Status</div><div class="fchecks" id="f-status"></div></div>
+   <div class="fgroup"><div class="fl">Type</div><select id="f-arch"></select></div>
+   <div class="fgroup"><div class="fl">Channel</div><select id="f-channel"></select></div>
+   <div class="fgroup"><div class="fl">Reached at least</div><select id="f-reached"></select></div>
+   <div class="fgroup"><div class="fl">Applied</div><select id="f-applied">
+    <option value="">Any time</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></div>
+  </div>
+  <div class="pills" id="pills"></div>
   <table>
    <thead><tr>
     <th data-k="company">Company</th><th data-k="archetype">Type</th>
@@ -161,11 +193,12 @@ td .noteinput:focus{border-color:var(--applied);outline:none;color:var(--ink)}
 <div class="loading" id="loading">Loading from local database...</div>
 </div>
 <script>
-const STATUSES=["unconfirmed","applied","screen","interview","onsite","offer","rejected","withdrawn"];
+const STATUSES=["prepped","unconfirmed","applied","screen","interview","onsite","offer","hold","rejected","withdrawn"];
+const ACTIVE=["applied","screen","interview","onsite"];
 const STAGES=["applied","screen","interview","onsite","offer"];
 const RANK={applied:0,screen:1,interview:2,onsite:3,offer:4};
-const COLOR={unconfirmed:"#9aa3af",applied:"#3b82f6",screen:"#6366f1",interview:"#f59e0b",onsite:"#8b5cf6",offer:"#10b981",rejected:"#ef4444",withdrawn:"#94a3b8"};
-let data=[], filter={status:null,q:""}, sort={k:"date",dir:-1}, pending=0;
+const COLOR={prepped:"#0ea5e9",hold:"#a16207",unconfirmed:"#9aa3af",applied:"#3b82f6",screen:"#6366f1",interview:"#f59e0b",onsite:"#8b5cf6",offer:"#10b981",rejected:"#ef4444",withdrawn:"#94a3b8"};
+let data=[], filter=emptyFilter(), sort={k:"date",dir:-1}, pending=0;
 
 function setSync(s,m){const d=document.getElementById("dot"),t=document.getElementById("synctext");
  d.className="dot"+(s==="busy"?" busy":s==="err"?" err":"");t.textContent=m;}
@@ -190,7 +223,9 @@ function counts(){const c={};STATUSES.forEach(s=>c[s]=0);data.forEach(r=>c[r.sta
 
 function render(){
  const c=counts();
- const submitted=c.applied+c.screen+c.interview+c.onsite+c.offer+c.rejected;
+ // A withdrawn row that reached a screen or later was submitted first, so it counts as submitted.
+ const wSent=data.filter(r=>r.status==="withdrawn"&&(RANK[r.stage_reached]||0)>0).length;
+ const submitted=c.applied+c.screen+c.interview+c.onsite+c.offer+c.rejected+wSent;
  // Pipeline depth uses stage_reached (furthest stage ever attained), not status:
  // status collapses history, so a rejected-after-interview app would vanish from these counts.
  const reach=t=>data.filter(r=>(RANK[r.stage_reached]||0)>=RANK[t]).length;
@@ -198,8 +233,8 @@ function render(){
  const responses=data.filter(r=>(RANK[r.stage_reached]||0)>0||r.status==="rejected").length;
  const pct=(a,b)=>b?Math.round(a/b*100)+"%":"0%";
  document.getElementById("sub").textContent=
-  `${data.length} tracked = ${submitted} submitted + ${c.withdrawn} never sent (withdrawn)`+
-  (c.unconfirmed?` + ${c.unconfirmed} unconfirmed`:"")+`  ·  source of truth: funnel.sqlite`;
+  `${data.length} tracked = ${submitted} submitted + ${c.withdrawn-wSent} never sent (withdrawn)`+
+  (c.unconfirmed?` + ${c.unconfirmed} unconfirmed`:"")+(c.prepped?` + ${c.prepped} prepped`:"")+(c.hold?` + ${c.hold} on hold`:"")+`  ·  source of truth: funnel.sqlite`;
  const kpis=[
   ["Submitted",submitted,"entered pipeline"],["Unconfirmed",c.unconfirmed,"verify if sent"],
   ["Response rate",pct(responses,submitted),`${responses} of ${submitted}`],
@@ -231,19 +266,61 @@ function render(){
   `<div class="distrow"><div class="dn" style="width:70px">${x.lbl}</div>
    <div class="db"><div class="df" style="width:${x.n/wmax*100}%;background:${COLOR.applied}"></div></div>
    <div class="dc">${x.n}</div></div>`).join("")||"<div class='foot'>no dated rows</div>";
- renderChips(c);renderTable();
+ renderChips(c);renderSelects();renderTable();
 }
 function monthWk(d){const m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];return `${m} w${Math.ceil(d.getDate()/7)}`;}
+function emptyFilter(){return {statuses:new Set(),q:"",arch:"",channel:"",reached:"",applied:""};}
+// Quick views are preset status sets. Anything finer goes through the Filters panel checkboxes.
+const VIEWS=[["All",[]],["Active",ACTIVE],["Prepped",["prepped"]],["On hold",["hold"]],["Closed",["rejected","withdrawn"]]];
+const sameSet=(st,arr)=>st.size==arr.length&&arr.every(x=>st.has(x));
+const norm=v=>(v==null?"":String(v)).trim().toLowerCase();
 function renderChips(c){
- const el=document.getElementById("chips");
- el.innerHTML=`<span class="chip ${filter.status==null?'on':''}" data-s="">all</span>`+
-  STATUSES.map(s=>`<span class="chip ${filter.status==s?'on':''}" data-s="${s}">${s} ${c[s]}</span>`).join("");
- el.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{filter.status=ch.dataset.s||null;render();});
+ const st=filter.statuses,v=document.getElementById("views");
+ v.innerHTML=VIEWS.map(([lbl,arr],i)=>`<button class="${sameSet(st,arr)?'on':''}" data-i="${i}">${lbl}<span class="n">${arr.length?arr.reduce((n,s)=>n+(c[s]||0),0):data.length}</span></button>`).join("");
+ v.querySelectorAll("button").forEach(b=>b.onclick=()=>{st.clear();VIEWS[+b.dataset.i][1].forEach(x=>st.add(x));render();});
+ const fs=document.getElementById("f-status");
+ fs.innerHTML=STATUSES.map(s=>`<label class="fcheck"><input type="checkbox" value="${s}" ${st.has(s)?'checked':''}/><span class="sw" style="background:${COLOR[s]}"></span>${s}<span class="n">${c[s]}</span></label>`).join("");
+ fs.querySelectorAll("input").forEach(i=>i.onchange=()=>{i.checked?st.add(i.value):st.delete(i.value);render();});
 }
+function fillSelect(id,values,cur){
+ document.getElementById(id).innerHTML=`<option value="">Any</option>`+values.map(v=>`<option value="${esc(v)}" ${cur==v?'selected':''}>${esc(v)}</option>`).join("");
+}
+// Dropdown options come from the data itself, so new archetypes or channels show up without code changes.
+function renderSelects(){
+ const uniq=k=>[...new Set(data.map(r=>norm(r[k])).filter(Boolean))].sort();
+ fillSelect("f-arch",uniq("archetype"),filter.arch);
+ fillSelect("f-channel",uniq("channel"),filter.channel);
+ fillSelect("f-reached",STAGES,filter.reached);
+ document.getElementById("f-applied").value=filter.applied;
+}
+// Every active filter shows as a removable pill, so the panel can stay closed.
+function renderPills(){
+ const pills=[];
+ if(filter.statuses.size&&!VIEWS.some(([,a])=>a.length&&sameSet(filter.statuses,a)))
+  pills.push(["Status",[...filter.statuses].join(", "),()=>filter.statuses.clear()]);
+ if(filter.arch)pills.push(["Type",filter.arch,()=>filter.arch=""]);
+ if(filter.channel)pills.push(["Channel",filter.channel,()=>filter.channel=""]);
+ if(filter.reached)pills.push(["Reached",filter.reached+"+",()=>filter.reached=""]);
+ if(filter.applied)pills.push(["Applied","last "+filter.applied+" days",()=>filter.applied=""]);
+ const el=document.getElementById("pills");
+ el.innerHTML=pills.map((p,i)=>`<span class="pill">${p[0]}: <b>${esc(p[1])}</b><span class="x" data-i="${i}" title="remove">&times;</span></span>`).join("")+
+  (pills.length||filter.q?`<span class="clear" id="f-clear">clear all</span>`:"");
+ el.querySelectorAll(".x").forEach(x=>x.onclick=()=>{pills[+x.dataset.i][2]();render();});
+ const cl=document.getElementById("f-clear");if(cl)cl.onclick=()=>{filter=emptyFilter();document.getElementById("search").value="";render();};
+ const n=(filter.statuses.size?1:0)+[filter.arch,filter.channel,filter.reached,filter.applied].filter(Boolean).length;
+ const fc=document.getElementById("fcount");fc.hidden=!n;fc.textContent=n;
+ document.getElementById("fbtn").classList.toggle("has",n>0);
+}
+function daysSince(d){if(!d)return null;const t=(Date.now()-new Date(d+"T00:00:00").getTime())/86400000;return isNaN(t)?null:t;}
 function renderTable(){
  let rows=data.slice();
- if(filter.status)rows=rows.filter(r=>r.status==filter.status);
+ if(filter.statuses.size)rows=rows.filter(r=>filter.statuses.has(r.status));
  if(filter.q){const q=filter.q.toLowerCase();rows=rows.filter(r=>(r.company+" "+r.role).toLowerCase().includes(q));}
+ if(filter.arch)rows=rows.filter(r=>norm(r.archetype)==filter.arch);
+ if(filter.channel)rows=rows.filter(r=>norm(r.channel)==filter.channel);
+ // "Reached" means at least that deep, same rule the funnel uses. Rows with no recorded stage never match.
+ if(filter.reached)rows=rows.filter(r=>r.stage_reached in RANK&&RANK[r.stage_reached]>=RANK[filter.reached]);
+ if(filter.applied){const n=+filter.applied;rows=rows.filter(r=>{const d=daysSince(r.date);return d!=null&&d<=n;});}
  rows.sort((a,b)=>{let x=a[sort.k]||"",y=b[sort.k]||"";if(sort.k=="score"){x=a.score||0;y=b.score||0;}return (x>y?1:x<y?-1:0)*sort.dir;});
  const tb=document.getElementById("tbody");
  tb.innerHTML=rows.map(r=>{
@@ -265,16 +342,24 @@ function renderTable(){
    // stage_reached only moves forward: setting status to a deeper stage drags it along
    if((RANK[e.target.value]||0)>(RANK[row.stage_reached]||0)){row.stage_reached=e.target.value;write("/api/update",{id,field:"stage_reached",value:e.target.value});}
    render();};
-  tr.querySelector(".stg").onchange=e=>{row.stage_reached=e.target.value;write("/api/update",{id,field:"stage_reached",value:e.target.value});render();};
+  // stage_reached is a forward-only high-water mark. Lowering it is allowed only as an explicit correction.
+  tr.querySelector(".stg").onchange=e=>{const v=e.target.value,cur=row.stage_reached||"applied";
+   if((RANK[v]||0)<(RANK[cur]||0)&&!confirm(`Lower "furthest stage reached" from ${cur} to ${v}? Only do this to correct a mistake.`)){e.target.value=cur;return;}
+   row.stage_reached=v;write("/api/update",{id,field:"stage_reached",value:v});render();};
   tr.querySelector(".noteinput").onchange=e=>{row.note=e.target.value;write("/api/update",{id,field:"note",value:e.target.value});};
   tr.querySelector(".del").onclick=()=>{if(confirm("Delete "+row.company+"?")){data=data.filter(r=>String(r.id)!=String(id));write("/api/delete",{id});render();}};
  });
  document.getElementById("foot").textContent=`showing ${rows.length} of ${data.length}`;
+ renderPills();
 }
 function esc(s){return(s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
 document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;sort.dir=(sort.k==k)?-sort.dir:1;sort.k=k;render();});
 document.getElementById("search").oninput=e=>{filter.q=e.target.value;renderTable();};
+[["f-arch","arch"],["f-channel","channel"],["f-reached","reached"],["f-applied","applied"]].forEach(([id,k])=>
+ document.getElementById(id).onchange=e=>{filter[k]=e.target.value;renderTable();});
+document.getElementById("fbtn").onclick=()=>{const p=document.getElementById("fpanel");p.hidden=!p.hidden;
+ document.getElementById("fbtn").classList.toggle("open",!p.hidden);};
 document.getElementById("add").onclick=()=>{
  const company=prompt("Company?");if(!company)return;const role=prompt("Role?")||"";
  const row={id:"x"+Date.now(),company,role,archetype:"",date:new Date().toISOString().slice(0,10),score:null,status:"applied",note:"",channel:"cold",posted_date:null,stage_reached:"applied"};
