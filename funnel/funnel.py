@@ -223,9 +223,12 @@ function counts(){const c={};STATUSES.forEach(s=>c[s]=0);data.forEach(r=>c[r.sta
 
 function render(){
  const c=counts();
- // A withdrawn row that reached a screen or later was submitted first, so it counts as submitted.
- const wSent=data.filter(r=>r.status==="withdrawn"&&(RANK[r.stage_reached]||0)>0).length;
- const submitted=c.applied+c.screen+c.interview+c.onsite+c.offer+c.rejected+wSent;
+ // Submitted = a submitted status, or any row that reached screen or later (it was sent first,
+ // whatever its status is now: hold, withdrawn, ...). Unsent rows are counted by status below.
+ const SUBMITTED=["applied","screen","interview","onsite","offer","rejected"];
+ const wasSent=r=>SUBMITTED.includes(r.status)||(RANK[r.stage_reached]||0)>0;
+ const submitted=data.filter(wasSent).length;
+ const unsent=s=>data.filter(r=>r.status===s&&!wasSent(r)).length;
  // Pipeline depth uses stage_reached (furthest stage ever attained), not status:
  // status collapses history, so a rejected-after-interview app would vanish from these counts.
  const reach=t=>data.filter(r=>(RANK[r.stage_reached]||0)>=RANK[t]).length;
@@ -233,8 +236,8 @@ function render(){
  const responses=data.filter(r=>(RANK[r.stage_reached]||0)>0||r.status==="rejected").length;
  const pct=(a,b)=>b?Math.round(a/b*100)+"%":"0%";
  document.getElementById("sub").textContent=
-  `${data.length} tracked = ${submitted} submitted + ${c.withdrawn-wSent} never sent (withdrawn)`+
-  (c.unconfirmed?` + ${c.unconfirmed} unconfirmed`:"")+(c.prepped?` + ${c.prepped} prepped`:"")+(c.hold?` + ${c.hold} on hold`:"")+`  ·  source of truth: funnel.sqlite`;
+  `${data.length} tracked = ${submitted} submitted + ${unsent("withdrawn")} never sent (withdrawn)`+
+  (unsent("unconfirmed")?` + ${unsent("unconfirmed")} unconfirmed`:"")+(unsent("prepped")?` + ${unsent("prepped")} prepped`:"")+(unsent("hold")?` + ${unsent("hold")} on hold, not sent`:"")+`  ·  source of truth: funnel.sqlite`;
  const kpis=[
   ["Submitted",submitted,"entered pipeline"],["Unconfirmed",c.unconfirmed,"verify if sent"],
   ["Response rate",pct(responses,submitted),`${responses} of ${submitted}`],
