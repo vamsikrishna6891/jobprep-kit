@@ -395,6 +395,7 @@ class H(BaseHTTPRequestHandler):
             self._send(200, HTML, "text/html; charset=utf-8")
         elif self.path == "/api/rows":
             c = db()
+            enforce_stage_invariant(c)  # heal external status edits on every poll
             rows = [dict(x) for x in c.execute("SELECT * FROM apps ORDER BY date").fetchall()]
             c.close()
             self._send(200, json.dumps(rows))
